@@ -30,7 +30,7 @@
 .EQU ddr_toggles1 = DDRB
 
 .EQU pin_Nvblank = PB0
-.EQU pin_Nmemaccess = PB1	; When LOW, memory can be accessed externally
+.EQU pin_Nmemaccess = PB1
 
 .EQU port_addr = PORTC
 .EQU ddr_addr = DDRC
@@ -109,6 +109,58 @@
   mov @0, rtmp
 .ENDMACRO
 
+.MACRO SET_PORTS_FOR_READING
+  ; Data port: Input w/pull-up
+  out ddr_data, rZero
+  out port_data, rFF
+  ; Addr port: Output
+  out ddr_addr, rFF
+  ; Addr latch: Output LOW
+  cbi port_toggles2, pin_Nlatchout
+  ; Memread / memwrite pins: Output, memwrite HIGH, memread LOW
+  sbi ddr_toggles2, pin_Nmemread
+  sbi ddr_toggles2, pin_Nmemwrite
+  cbi port_toggles2, pin_Nmemread
+  sbi port_toggles2, pin_Nmemwrite
+  ; External transciever: Output HIGH
+  sbi port_toggles1, pin_Nmemaccess
+.ENDMACRO
+
+.MACRO SET_PORTS_FOR_WRITING
+  ; Data port: Output
+  out ddr_data, rFF
+  out port_data, rFF
+  ; Addr port: Output
+  out ddr_addr, rFF
+  ; Addr latch: Output LOW
+  cbi port_toggles2, pin_Nlatchout
+  ; Memread / memwrite pins: Output, both HIGH
+  sbi ddr_toggles2, pin_Nmemread
+  sbi ddr_toggles2, pin_Nmemwrite
+  sbi port_toggles2, pin_Nmemread
+  sbi port_toggles2, pin_Nmemwrite
+  ; External transciever: Output HIGH
+  sbi port_toggles1, pin_Nmemaccess
+.ENDMACRO
+
+.MACRO SET_PORTS_FOR_EXTRAM
+  ; Data port: Input w/pull-up
+  out ddr_data, rZero
+  out port_data, rFF
+  ; Addr port: Input w/pull-up enabled
+  out ddr_addr, rZero
+  out port_addr, rFF
+  ; Addr latch: Output HIGH
+  sbi port_toggles2, pin_Nlatchout
+  ; Memread / memwrite pins: Input w/pull-up enabled
+  cbi ddr_toggles2, pin_Nmemread
+  cbi ddr_toggles2, pin_Nmemwrite
+  sbi port_toggles2, pin_Nmemread
+  sbi port_toggles2, pin_Nmemwrite
+  ; External transciever: Output LOW
+  cbi port_toggles1, pin_Nmemaccess
+.ENDMACRO
+
 .MACRO MEMORY_READ_ENABLED
   ; Set data DDR to input and turn on memory read.
   out ddr_data, rZero
@@ -133,57 +185,9 @@
   cbi port_toggles2, pin_addrlatch
 .ENDMACRO
 
-.MACRO DO_OUT_COL_ADDR
-  out port_data, XL
-  inc XL
-.ENDMACRO
-
-.MACRO DO_OUT_ROW_ADDR
-  out port_data, XH
-  inc XL
-.ENDMACRO
-
 .MACRO DO_OUT_PIXEL
   out port_addr, XL
   inc XL
-.ENDMACRO
-
-.MACRO DO_16_COLADDR_PIXELS
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-  DO_OUT_COL_ADDR
-.ENDMACRO
-
-.MACRO DO_16_ROWADDR_PIXELS
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
-  DO_OUT_ROW_ADDR
 .ENDMACRO
 
 .MACRO DO_16_PIXELS
@@ -205,42 +209,6 @@
   DO_OUT_PIXEL
 .ENDMACRO
 
-.MACRO DO_240_COLADDR_PIXELS
-  DO_16_COLADDR_PIXELS			; 000-015
-  DO_16_COLADDR_PIXELS			; 016-031
-  DO_16_COLADDR_PIXELS			; 032-047
-  DO_16_COLADDR_PIXELS			; 048-063
-  DO_16_COLADDR_PIXELS			; 064-079
-  DO_16_COLADDR_PIXELS			; 080-095
-  DO_16_COLADDR_PIXELS			; 096-111
-  DO_16_COLADDR_PIXELS			; 112-127
-  DO_16_COLADDR_PIXELS			; 128-143
-  DO_16_COLADDR_PIXELS			; 144-159
-  DO_16_COLADDR_PIXELS			; 160-175
-  DO_16_COLADDR_PIXELS			; 176-191
-  DO_16_COLADDR_PIXELS			; 192-207
-  DO_16_COLADDR_PIXELS			; 208-223
-  DO_16_COLADDR_PIXELS			; 224-239
-.ENDMACRO
-
-.MACRO DO_240_ROWADDR_PIXELS
-  DO_16_ROWADDR_PIXELS			; 000-015
-  DO_16_ROWADDR_PIXELS			; 016-031
-  DO_16_ROWADDR_PIXELS			; 032-047
-  DO_16_ROWADDR_PIXELS			; 048-063
-  DO_16_ROWADDR_PIXELS			; 064-079
-  DO_16_ROWADDR_PIXELS			; 080-095
-  DO_16_ROWADDR_PIXELS			; 096-111
-  DO_16_ROWADDR_PIXELS			; 112-127
-  DO_16_ROWADDR_PIXELS			; 128-143
-  DO_16_ROWADDR_PIXELS			; 144-159
-  DO_16_ROWADDR_PIXELS			; 160-175
-  DO_16_ROWADDR_PIXELS			; 176-191
-  DO_16_ROWADDR_PIXELS			; 192-207
-  DO_16_ROWADDR_PIXELS			; 208-223
-  DO_16_ROWADDR_PIXELS			; 224-239
-.ENDMACRO
-
 .MACRO DO_240_PIXELS
   DO_16_PIXELS			; 000-015
   DO_16_PIXELS			; 016-031
@@ -260,8 +228,7 @@
 .ENDMACRO
 
 .MACRO START_DO_VIDEO_LINE
-	; Disable external memory access.
-	;sbi port_toggles1, pin_Nmemaccess
+	SET_PORTS_FOR_READING
 
 	; Push registers onto stack.
 	push rtmp
@@ -275,28 +242,28 @@
 	lds YL, Video_CurLine+1
 
 	; Save I/O states for address and data ports.
-	in rtmp, ddr_data
-	push rtmp
-	in rtmp, port_data
-	push rtmp
-	in rtmp, ddr_addr
-	push rtmp
-	in rtmp, port_addr
-	push rtmp
+	;in rtmp, ddr_data
+	;push rtmp
+	;in rtmp, port_data
+	;push rtmp
+	;in rtmp, ddr_addr
+	;push rtmp
+	;in rtmp, port_addr
+	;push rtmp
 
 	out port_data, rZero
 .ENDMACRO
 
 .MACRO END_DO_VIDEO_LINE
 	; Load I/O states for address and data ports.
-	pop rtmp
-	out port_addr, rtmp
-	pop rtmp
-	out ddr_addr, rtmp
-	pop rtmp
-	out port_data, rtmp
-	pop rtmp
-	out ddr_data, rtmp
+	;pop rtmp
+	;out port_addr, rtmp
+	;pop rtmp
+	;out ddr_addr, rtmp
+	;pop rtmp
+	;out port_data, rtmp
+	;pop rtmp
+	;out ddr_data, rtmp
 
 	; Store current video line into memory.	
 	sts Video_CurLine, YH
@@ -309,8 +276,7 @@
 	pop XL
 	pop rtmp
 
-	; Re-enable external memory access.
-	;sbi port_toggles1, pin_Nmemaccess
+	SET_PORTS_FOR_EXTRAM
 
 	reti
 .ENDMACRO
@@ -432,8 +398,8 @@ _secondhalf:
   ori rvidflags, (1 << flag_frameend)	; Set "end of frame" flag
 
 _checkforend:
-  ; If YH:YL < 524 (0x020C), increment Y.
-  cpi YL, $0C
+  ; If YH:YL < 523 (0x020B), increment Y.
+  cpi YL, $0B
   brlo _incy
 
   ; Otherwise, clear YH:YL.
@@ -455,11 +421,13 @@ _vidline2:
 
 _waitonhsync:
   ; Wait to finish HSYNC pulse + H back porch.
-  ldi rtmp, 13
+  ldi rtmp, 5
 
 _hsyncbploop:
   dec rtmp
   brne _hsyncbploop
+  nop
+  nop
   nop
 
   ; We have approximately 486 cycles that are usable.
@@ -570,18 +538,18 @@ Main:
   out MCUCR,rtmp
 
   ; Lets load up our memory!
-  MEMORY_READ_DISABLED
+  SET_PORTS_FOR_WRITING
 
   rcall ClearMemory
 
-  ;rcall MemoryTestPattern
+  rcall MemoryTestPattern
   
-  LOAD_IMM r0, 50
-  LOAD_IMM r1, 30
-  LOAD_IMM r2, 130
-  LOAD_IMM r3, 130
-  LOAD_IMM r4, 0b00000111
-  rcall DrawFilledBox
+  ;LOAD_IMM r0, 50
+  ;LOAD_IMM r1, 30
+  ;LOAD_IMM r2, 130
+  ;LOAD_IMM r3, 130
+  ;LOAD_IMM r4, 0b00000111
+  ;rcall DrawFilledBox
 
   MEMORY_READ_ENABLED
   ; Turn on interrupts.
